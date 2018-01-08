@@ -3,6 +3,7 @@ package butterknife.internal;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
+import android.os.SystemClock;
 import android.support.annotation.AttrRes;
 import android.support.annotation.DimenRes;
 import android.support.annotation.DrawableRes;
@@ -12,8 +13,16 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.util.TypedValue;
 import android.view.View;
+
 import java.lang.reflect.Array;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import butterknife.R;
+
+import static android.text.TextUtils.isEmpty;
 
 @SuppressWarnings("WeakerAccess") // Used by generated code.
 public final class Utils {
@@ -142,6 +151,28 @@ public final class Utils {
       return "<unavailable while editing>";
     }
     return view.getContext().getResources().getResourceEntryName(id);
+  }
+
+  private static Map<String, Long> mLastClickedTimeMap = new HashMap<>();
+  private static final int CLICK_DELAY_MIN = 600;
+
+  public static boolean isRecentlyClicked(View view) {
+    String viewIdTag = (String) (view.getTag(R.id.key_tag_uuid) != null ? view.getTag() : "");
+    long currentTime = SystemClock.elapsedRealtime();
+    if (isEmpty(viewIdTag)) {
+      viewIdTag = UUID.randomUUID().toString();
+      view.setTag(R.id.key_tag_uuid, viewIdTag);
+      mLastClickedTimeMap.put(viewIdTag, currentTime);
+      return false;
+    } else {
+      long lastClickedTime = mLastClickedTimeMap.get(viewIdTag);
+      if (lastClickedTime + CLICK_DELAY_MIN < currentTime) {//Click is allowed
+        mLastClickedTimeMap.put(viewIdTag, currentTime);
+        return false;
+      } else {//Click is not allowed
+        return true;
+      }
+    }
   }
 
   private Utils() {
